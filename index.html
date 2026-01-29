@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bibtex Sorter</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background-color: #f4f7f6; color: #333; }
+        h1 { color: #2c3e50; text-align: center; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* Drag and drop area styles */
+        .upload-section { 
+            border: 2px dashed #3498db; 
+            padding: 40px; 
+            text-align: center; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            background-color: #fff;
+        }
+        /* Visual feedback when file is hovering over the area */
+        .upload-section.dragover { 
+            background-color: #ebf5fb; 
+            border-color: #2ecc71; 
+            transform: scale(1.02);
+        }
+        
+        #fileInput { display: none; }
+        .btn { display: block; width: 100%; padding: 12px; margin-top: 20px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; transition: 0.3s; font-weight: bold; }
+        .btn-sort { background-color: #3498db; color: white; }
+        .btn-sort:hover { background-color: #2980b9; }
+        .btn-download { background-color: #27ae60; color: white; display: none; }
+        .btn-download:hover { background-color: #219150; }
+        .status { margin-top: 15px; font-weight: bold; text-align: center; }
+        .footer-note { font-size: 0.85em; color: #7f8c8d; text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Bibtex Sorter</h1>
+    
+    <div id="dropZone" class="upload-section">
+        <p id="fileName">Click to select or drag your .bib file here</p>
+        <input type="file" id="fileInput" accept=".bib">
+    </div>
+
+    <button id="sortBtn" class="btn btn-sort">Sort Alphabetically by ID</button>
+    <button id="downloadBtn" class="btn btn-download">Download Sorted File</button>
+    
+    <div id="status" class="status"></div>
+    
+    <p class="footer-note">Files are processed locally in your browser and are never uploaded to a server.</p>
+</div>
+
+<script>
+    let sortedContent = "";
+    let selectedFile = null;
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const fileName = document.getElementById('fileName');
+    const sortBtn = document.getElementById('sortBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const status = document.getElementById('status');
+
+    // Handle click to upload
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // Prevent default browser behavior for drag/drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Add/remove visual highlight
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+    });
+
+    // Handle dropped files
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+    });
+
+    // Handle files from input click
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            selectedFile = files[0];
+            fileName.innerText = "Selected file: " + selectedFile.name;
+            status.innerText = "";
+            downloadBtn.style.display = "none";
+        }
+    }
+
+    sortBtn.addEventListener('click', () => {
+        if (!selectedFile) {
+            status.innerText = "Please select or drop a file first.";
+            status.style.color = "#e74c3c";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+            try {
+                sortedContent = processBibtex(content);
+                status.innerText = "✅ Successfully sorted!";
+                status.style.color = "#27ae60";
+                downloadBtn.style.display = "block";
+            } catch (err) {
+                console.error(err);
+                status.innerText = "Error processing the Bibtex file.";
+                status.style.color = "#e74c3c";
+            }
+        };
+        reader.readAsText(selectedFile);
+    });
+
+    function processBibtex(text) {
+        const entries = text.split(/(?=@\w+\{)/g).filter(entry => entry.trim().length > 0);
+        const parsedEntries = entries.map(entry => {
+            const match = entry.match(/@\w+\{([^,]+),/);
+            return {
+                id: match ? match[1].trim() : "zzz_unknown",
+                content: entry.trim()
+            };
+        });
+
+        parsedEntries.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
+        return parsedEntries.map(e => e.content).join('\n\n');
+    }
+
+    downloadBtn.addEventListener('click', () => {
+        const blob = new Blob([sortedContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "sorted_references.bib";
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+</script>
+
+</body>
+</html>
