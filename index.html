@@ -9,7 +9,6 @@
         h1 { color: #2c3e50; text-align: center; }
         .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
-        /* Drag and drop area styles */
         .upload-section { 
             border: 2px dashed #3498db; 
             padding: 40px; 
@@ -19,7 +18,6 @@
             transition: all 0.3s ease; 
             background-color: #fff;
         }
-        /* Visual feedback when file is hovering over the area */
         .upload-section.dragover { 
             background-color: #ebf5fb; 
             border-color: #2ecc71; 
@@ -33,7 +31,7 @@
         .btn-download { background-color: #27ae60; color: white; display: none; }
         .btn-download:hover { background-color: #219150; }
         .status { margin-top: 15px; font-weight: bold; text-align: center; }
-        .footer-note { font-size: 0.85em; color: #7f8c8d; text-align: center; margin-top: 20px; }
+        footer { font-size: 0.85em; color: #7f8c8d; text-align: center; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; }
     </style>
 </head>
 <body>
@@ -51,112 +49,125 @@
     
     <div id="status" class="status"></div>
     
-	<footer>
-        <strong>Author:</strong> Afonso Manata (Logic alignment with MCasquilho's Python script)<br>
-        <strong>Date:</strong> 2026-01-29 | <strong>Compatibility:</strong> Tested on Seamonkey, Firefox, Chrome, Edge.
+    <footer>
+        <strong>Author:</strong> Afonso Manata <br>
+        <strong>Date:</strong> 2026-01-29
     </footer>
 </div>
 
 <script>
-    let sortedContent = "";
-    let selectedFile = null;
-    const fileInput = document.getElementById('fileInput');
-    const dropZone = document.getElementById('dropZone');
-    const fileName = document.getElementById('fileName');
-    const sortBtn = document.getElementById('sortBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const status = document.getElementById('status');
+    (function() {
+        var sortedContent = "";
+        var selectedFile = null;
+        var fileInput = document.getElementById('fileInput');
+        var dropZone = document.getElementById('dropZone');
+        var fileName = document.getElementById('fileName');
+        var sortBtn = document.getElementById('sortBtn');
+        var downloadBtn = document.getElementById('downloadBtn');
+        var status = document.getElementById('status');
 
-    // Handle click to upload
-    dropZone.addEventListener('click', () => fileInput.click());
+        // Eventos com funções tradicionais para compatibilidade total
+        dropZone.onclick = function() { fileInput.click(); };
 
-    // Prevent default browser behavior for drag/drop
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    // Add/remove visual highlight
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
-    });
-
-    // Handle dropped files
-    dropZone.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        handleFiles(files);
-    });
-
-    // Handle files from input click
-    fileInput.addEventListener('change', (e) => {
-        handleFiles(e.target.files);
-    });
-
-    function handleFiles(files) {
-        if (files.length > 0) {
-            selectedFile = files[0];
-            fileName.innerText = "Selected file: " + selectedFile.name;
-            status.innerText = "";
-            downloadBtn.style.display = "none";
-        }
-    }
-
-    sortBtn.addEventListener('click', () => {
-        if (!selectedFile) {
-            status.innerText = "Please select or drop a file first.";
-            status.style.color = "#e74c3c";
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const content = e.target.result;
-            try {
-                sortedContent = processBibtex(content);
-                status.innerText = "✅ Successfully sorted!";
-                status.style.color = "#27ae60";
-                downloadBtn.style.display = "block";
-            } catch (err) {
-                console.error(err);
-                status.innerText = "Error processing the Bibtex file.";
-                status.style.color = "#e74c3c";
-            }
+        var preventDefaults = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
         };
-        reader.readAsText(selectedFile);
-    });
 
-    function processBibtex(text) {
-        const entries = text.split(/(?=@\w+\{)/g).filter(entry => entry.trim().length > 0);
-        const parsedEntries = entries.map(entry => {
-            const match = entry.match(/@\w+\{([^,]+),/);
-            return {
-                id: match ? match[1].trim() : "zzz_unknown",
-                content: entry.trim()
+        var events = ['dragenter', 'dragover', 'dragleave', 'drop'];
+        for (var i = 0; i < events.length; i++) {
+            dropZone.addEventListener(events[i], preventDefaults, false);
+        }
+
+        dropZone.addEventListener('dragenter', function() { dropZone.classList.add('dragover'); }, false);
+        dropZone.addEventListener('dragover', function() { dropZone.classList.add('dragover'); }, false);
+        dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('dragover'); }, false);
+        dropZone.addEventListener('drop', function(e) { 
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files); 
+        }, false);
+
+        fileInput.onchange = function(e) {
+            handleFiles(e.target.files);
+        };
+
+        function handleFiles(files) {
+            if (files && files.length > 0) {
+                selectedFile = files[0];
+                fileName.innerHTML = "Selected file: " + selectedFile.name;
+                status.innerHTML = "";
+                downloadBtn.style.display = "none";
+            }
+        }
+
+        sortBtn.onclick = function() {
+            if (!selectedFile) {
+                status.innerHTML = "Please select or drop a file first.";
+                status.style.color = "#e74c3c";
+                return;
+            }
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var content = e.target.result;
+                try {
+                    sortedContent = processBibtex(content);
+                    status.innerHTML = "✅ Successfully sorted!";
+                    status.style.color = "#27ae60";
+                    downloadBtn.style.display = "block";
+                } catch (err) {
+                    status.innerHTML = "Error processing the Bibtex file.";
+                    status.style.color = "#e74c3c";
+                }
             };
-        });
+            reader.readAsText(selectedFile);
+        };
 
-        parsedEntries.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
-        return parsedEntries.map(e => e.content).join('\n\n');
-    }
+        function processBibtex(text) {
+            // Split tradicional compatível com Regex de browsers antigos
+            var entries = text.split(/(?=@\w+\{)/g);
+            var filtered = [];
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].trim().length > 0) filtered.push(entries[i]);
+            }
 
-    downloadBtn.addEventListener('click', () => {
-        const blob = new Blob([sortedContent], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = "sorted_references.bib";
-        a.click();
-        window.URL.revokeObjectURL(url);
-    });
+            var parsedEntries = [];
+            for (var j = 0; j < filtered.length; j++) {
+                var entry = filtered[j];
+                var match = entry.match(/@\w+\{([^,]+),/);
+                parsedEntries.push({
+                    id: match ? match[1].trim() : "zzz_unknown",
+                    content: entry.trim()
+                });
+            }
+
+            parsedEntries.sort(function(a, b) {
+                return a.id.toLowerCase().localeCompare(b.id.toLowerCase());
+            });
+
+            var result = "";
+            for (var k = 0; k < parsedEntries.length; k++) {
+                result += parsedEntries[k].content + "\n\n";
+            }
+            return result;
+        }
+
+        downloadBtn.onclick = function() {
+            var blob = new Blob([sortedContent], { type: 'text/plain;charset=utf-8' });
+            var url = (window.URL || window.webkitURL).createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = "sorted_references.bib";
+            document.body.appendChild(a);
+            a.click();
+            
+            // Pequeno delay para browsers que limpam o cache agressivamente
+            setTimeout(function() {
+                document.body.removeChild(a);
+                (window.URL || window.webkitURL).revokeObjectURL(url);
+            }, 100);
+        };
+    })();
 </script>
 
 </body>
